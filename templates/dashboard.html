@@ -1,0 +1,92 @@
+{% extends "base.html" %}
+{% block head %}
+<style>
+    .message-card {
+        background: #f1f2f6;
+        border-left: 4px solid #1e90ff;
+        padding: 15px;
+        margin-bottom: 20px;
+        border-radius: 4px;
+        word-wrap: break-word; /* Handle long FingerprintJS strings */
+    }
+    .meta-data {
+        background: #dfe4ea;
+        padding: 10px;
+        margin-top: 10px;
+        font-family: monospace;
+        font-size: 13px;
+        border-radius: 4px;
+        max-height: 200px;
+        overflow-y: auto;
+    }
+    .vulnerable-box {
+        border: 1px solid #ff4757;
+        padding: 10px;
+        background: #fff;
+        margin-top: 10px;
+    }
+    .secure-box {
+        border: 1px solid #2ed573;
+        padding: 10px;
+        background: #fff;
+        margin-top: 10px;
+    }
+    .badge-vuln { background: #ff4757; color: white; padding: 2px 5px; border-radius: 3px; font-size: 11px; }
+    .badge-sec { background: #2ed573; color: white; padding: 2px 5px; border-radius: 3px; font-size: 11px; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #eee; padding-bottom: 10px; margin-bottom: 20px;">
+    <h2>Dashboard: Welcome, {{ username }}!</h2>
+    <a href="/logout" class="btn" style="background-color: #ff4757;">Logout</a>
+</div>
+
+<div style="background: #eccc68; padding: 15px; border-radius: 8px; margin-bottom: 30px; text-align: center;">
+    <strong>Your Shareable Link:</strong><br>
+    <a href="/u/{{ username }}" target="_blank" style="font-size: 18px; font-weight: bold; color: #2f3542;">
+        {{ request.url_root }}u/{{ username }}
+    </a>
+</div>
+
+<h3>Received Messages ({{ messages|length }})</h3>
+
+{% if not messages %}
+    <p>No messages yet. Share your link!</p>
+{% else %}
+    {% for msg in messages %}
+    <div class="message-card">
+        <small style="color: #747d8c;">Received: {{ msg.created_at }}</small>
+        
+        <h4>Message Data</h4>
+        
+        <!-- VULNERABLE DISPLAY (Raw HTML) -->
+        <div>
+            <span class="badge-vuln">VULNERABLE (XSS)</span>
+            <div class="vulnerable-box">
+                {{ msg.content | safe }}
+            </div>
+        </div>
+        
+        <!-- SECURE DISPLAY (Escaped HTML) -->
+        <div>
+            <span class="badge-sec">SECURE (Escaped)</span>
+            <div class="secure-box">
+                {{ msg.content }}
+            </div>
+        </div>
+
+        <h4 style="margin-top: 20px;">Visitor Metadata (Collected via fingerprinting)</h4>
+        <div class="meta-data">
+            <strong>IP Address:</strong> {{ msg.ip_address }}<br>
+            <strong>User Agent:</strong> {{ msg.user_agent }}<br><br>
+            <strong>Visitor ID (FingerprintJS):</strong> {{ msg.visitor_id }}<br>
+            <strong>Timezone:</strong> {{ msg.timezone }}<br>
+            <strong>Screen Info:</strong> {{ msg.screen_info }}<br><br>
+            <strong>Canvas Fingerprint Data:</strong><br>
+            <span style="word-break: break-all;">{{ msg.canvas_fingerprint }}</span>
+        </div>
+    </div>
+    {% endfor %}
+{% endif %}
+{% endblock %}
