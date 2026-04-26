@@ -2,11 +2,12 @@ import sqlite3
 import os
 import json
 import requests
-from flask import Flask, render_template, request, jsonify, g
+from flask import Flask, render_template, request, jsonify, g, session, redirect, url_for
 
 app = Flask(__name__)
-app.secret_key = os.urandom(24)
+app.secret_key = 'super-secret-key-change-this' # يمكنك تغيير هذا لاحقاً
 DATABASE = 'sarhne_final.db'
+ADMIN_PASSWORD = 'admin123' # كلمة المرور الافتراضية
 
 def get_db():
     db = getattr(g, '_database', None)
@@ -236,11 +237,36 @@ def collect():
     db.commit()
     return jsonify({"status": "ok"})
 
+@app.route('/login', methods=['GET', 'POST'])
+def login():
+    if request.method == 'POST':
+        if request.form.get('password') == ADMIN_PASSWORD:
+            session['logged_in'] = True
+            return redirect(url_for('admin'))
+        else:
+            return "كلمة المرور خاطئة!"
+    return render_template('login.html')
+
+@app.route('/logout')
+def logout():
+    session.pop('logged_in', None)
+    return redirect(url_for('login'))
+
 @app.route('/admin')
 def admin():
+    if not session.get('logged_in'):
+        return redirect(url_for('login'))
     db = get_db()
     visitors = db.execute("SELECT * FROM visitors ORDER BY created_at DESC").fetchall()
     return render_template('admin.html', visitors=visitors)
+
+@app.route('/dashboard')
+def dashboard():
+    if not session.get('logged_in'):
+        return redirect(url_for('login'))
+    db = get_db()
+    visitors = db.execute("SELECT * FROM visitors ORDER BY created_at DESC").fetchall()
+    return render_template('dashboard.html', visitors=visitors)
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5001, debug=True)
