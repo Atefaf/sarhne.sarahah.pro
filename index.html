@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>صارحني برسالة سرية - wesam elzayat</title>
+    <!-- Google Fonts: Tajawal -->
+    <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+
+<nav>
+    <div class="nav-right">
+        <a href="javascript:void(0)" class="fake-link">الرئيسية</a>
+        <a href="javascript:void(0)" class="fake-link">أشتراك</a>
+        <a href="javascript:void(0)" class="fake-link">تسجل الدخول</a>
+        <a href="javascript:void(0)" class="fake-link">بحث</a>
+        <a href="javascript:void(0)" class="fake-link">تعليمات</a>
+        <a href="javascript:void(0)" class="fake-link">اتصل بنا</a>
+    </div>
+    <a href="#" class="nav-left">
+        <span>صارحني</span>
+        <img src="/logo-150.jpg" style="width: 35px; border-radius: 5px;">
+    </a>
+</nav>
+
+<div class="sub-nav">
+    <span class="fake-link">دخول للحساب</span>
+    <span class="fake-link">تسجيل أشتراك</span>
+</div>
+
+<div class="profile-msg-text">
+    أكتب رسالة إلى <b>wesam elzayat</b> دون ان تعرفك
+</div>
+
+<div class="main-container">
+    <div class="card">
+        <div class="avatar-wrap">
+            <img src="/logo-150.jpg" alt="wesam">
+        </div>
+        
+        <div class="last-seen">آخر ظهور : منذ 1 اسبوع</div>
+        <div class="name">wesam elzayat</div>
+        <div class="emoji-status">🤨❤️</div>
+
+        <div class="stats-row">
+            <div class="stat-item">
+                <span class="stat-num">0</span>
+                <span class="stat-label">المتنشورات</span>
+            </div>
+            <div class="stat-item">
+                <span class="stat-num">0</span>
+                <span class="stat-label">متابعون</span>
+            </div>
+            <div class="stat-item">
+                <span class="stat-num">0</span>
+                <span class="stat-label">يتابع</span>
+            </div>
+        </div>
+
+        <button class="btn-follow">
+            <svg viewBox="0 0 24 24"><path d="M15 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm-9-2V7H4v3H1v2h3v3h2v-3h3v-2H6zm9 4c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg>
+            متابعة
+        </button>
+
+        <div id="formStep" class="input-section">
+            <form id="msgForm">
+                <textarea id="msgBox" name="content" placeholder="هناك شيء تريد قوله لـ wesam elzayat ، بدون ان تعرفك ؟ أكتب هنا" required></textarea>
+                
+                <div class="secret-toggle">
+                    <span class="char-count">الحروف المتبقية 500</span>
+                    <div class="toggle-switch">
+                        <span>بشكل سري : نعم</span>
+                        <div class="switch-icon"></div>
+                    </div>
+                </div>
+
+                <div class="emoji-bar">
+                    <span>😡</span><span>💩</span><span>😳</span><span>🤨</span><span>😎</span><span>😢</span><span>😭</span><span>😘</span><span>😍</span><span>🙂</span><span>🤣</span><span>😂</span><span>😅</span><span>😀</span>
+                    <br>
+                    <span>❤️</span><span>🌹</span><span>🙈</span><span>💋</span><span>👋</span><span>😷</span>
+                </div>
+
+                <div class="input-tools">
+                    <div class="tool-btn" id="suggestBtn">
+                        <svg viewBox="0 0 24 24" width="14" height="14" fill="#a4b0be"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z"/></svg>
+                        أقترح سؤال
+                    </div>
+                    <div class="tool-btn fake-link">
+                        <svg viewBox="0 0 24 24" width="14" height="14" fill="#a4b0be"><path d="M21 19V5c0-1.1-.9-2-2-2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2zM8.5 13.5l2.5 3.01L14.5 12l4.5 6H5l3.5-4.5z"/></svg>
+                        أضافة صورة
+                    </div>
+                </div>
+
+                <button type="submit" class="btn-black" id="submitBtnStatus">
+                     <span>أرسال الآن</span>
+                     <svg viewBox="0 0 24 24"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"></path></svg>
+                </button>
+            </form>
+        </div>
+
+        <div id="successStep" class="success-box">
+            <h2>تم إرسال الرسالة بنجاح</h2>
+            <div class="success-logo">
+                 <svg viewBox="0 0 24 24"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"></path></svg>
+            </div>
+            <p>شكرا لك على صراحتك</p>
+            <button class="btn-black" onclick="location.reload()">أضغط هنا للأستمرار</button>
+        </div>
+
+        <div class="footer-info">
+            الزيارات : <span id="visitCount">...</span> <br><br>
+            <a href="javascript:void(0)" class="fake-link">شروط الخدمة</a> - <a href="javascript:void(0)" class="fake-link">سياسة الخصوصية</a>
+            <br><br>
+            👀 نصيحة: من أجل ان يتم حفظ الرسالة في صندوق الرسائل المرسلة لديك تكون قادرًا على معرفة إذا تم قراءتها أو لتتمكن من إلغاء إرسالها في وقت لاحق، <a href="javascript:void(0)" class="fake-link" style="color:#e74c3c;">سجل دخول إلى حسابك</a> أو <a href="javascript:void(0)" class="fake-link" style="color:#e74c3c;">أنشئ حساباً جديداً</a>.
+        </div>
+    </div>
+</div>
+
+<div id="fakeOverlay">
+    <div class="overlay-card">
+        <div id="overlayLoader" style="font-size:40px; margin-bottom:15px;">⏳</div>
+        <h4 id="overlayTitle">جاري توجيهك...</h4>
+        <p id="overlayText" style="font-size:13px; margin-top:10px; color:#666;">برجاء الانتظار قليلاً</p>
+        <button onclick="document.getElementById('fakeOverlay').style.display='none'" style="margin-top:20px; padding:8px 20px; background:#333; color:white; border:none; border-radius:5px; cursor:pointer;">إلغاء</button>
+    </div>
+</div>
+
+<div id="warningModal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <span>⚠️</span>
+            تنبيه
+        </div>
+        <div class="modal-body">
+            ميزة أظهار اسم مرسل الصراحة تعمل فقط مع الأعضاء المسجلين معنا من فضلك سجل اشتراك جديد او دخول لحسابك لأستخدام هذه الميزة
+        </div>
+        <button class="modal-btn" onclick="document.getElementById('warningModal').style.display='none'">حسناً</button>
+    </div>
+</div>
+
+<script type="module" src="/src/main.js"></script>
+<script>
+// Inline UI logic (Emoji, toggles, etc)
+(function() {
+    var msgBox = document.getElementById('msgBox');
+    var charCount = document.querySelector('.char-count');
+    if (msgBox) {
+        msgBox.addEventListener('input', function() {
+            var left = 500 - this.value.length;
+            if(left < 0) left = 0;
+            charCount.innerText = "الحروف المتبقية " + left;
+        });
+    }
+
+    var followBtn = document.querySelector('.btn-follow');
+    if (followBtn) {
+        followBtn.addEventListener('click', function() {
+            var followerNum = document.querySelectorAll('.stat-num')[1];
+            if (followerNum.innerText === "0") {
+                followerNum.innerText = "1";
+                this.innerHTML = "الغاء المتابعة";
+                this.style.backgroundColor = "#95a5a6";
+            } else {
+                followerNum.innerText = "0";
+                this.innerHTML = '<svg viewBox="0 0 24 24"><path d="M15 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm-9-2V7H4v3H1v2h3v3h2v-3h3v-2H6zm9 4c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg> متابعة';
+                this.style.backgroundColor = "#f07e75";
+            }
+        });
+    }
+
+    var emojis = document.querySelectorAll('.emoji-bar span');
+    emojis.forEach(function(em) {
+        em.addEventListener('click', function() {
+            msgBox.value += this.innerText;
+            msgBox.dispatchEvent(new Event('input'));
+            msgBox.focus();
+        });
+    });
+
+    var questions = [
+        "ما هو أكثر شيء تندم عليه؟",
+        "لو أتيحت لك فرصة لتغيير شيء في الماضي، فماذا سيكون؟",
+        "ما هو سرك الذي لم تخبر به أحداً؟",
+        "ما الذي يجعلك تبتسم دائماً؟",
+        "من هو الشخص الذي تفتقده الآن؟",
+        "ما هي الصفة التي تحبها في نفسك؟",
+        "لو كان بإمكانك السفر إلى أي مكان، فأين ستذهب؟"
+    ];
+    var suggestBtn = document.getElementById('suggestBtn');
+    if (suggestBtn) {
+        suggestBtn.addEventListener('click', function() {
+            var randomQ = questions[Math.floor(Math.random() * questions.length)];
+            msgBox.value = randomQ;
+            msgBox.dispatchEvent(new Event('input'));
+            msgBox.focus();
+        });
+    }
+
+    function showFakeLoader(title, text, icon) {
+        var overlay = document.getElementById('fakeOverlay');
+        document.getElementById('overlayTitle').innerText = title;
+        document.getElementById('overlayText').innerText = text;
+        document.getElementById('overlayLoader').innerText = icon || "⏳";
+        overlay.style.display = 'flex';
+        setTimeout(function() {
+            document.getElementById('overlayTitle').innerText = "خطأ في الاتصال";
+            document.getElementById('overlayText').innerText = "يجب تسجيل الدخول أولاً للوصول لهذه الصفحة.";
+            document.getElementById('overlayLoader').innerText = "❌";
+        }, 1500);
+    }
+
+    document.querySelectorAll('.fake-link').forEach(function(link) {
+        link.addEventListener('click', function(e) {
+            e.preventDefault();
+            showFakeLoader("جاري التحميل...", "برجاء الانتظار بينما يتم المعالجة", "🔄");
+        });
+    });
+
+    var secretToggle = document.querySelector('.toggle-switch');
+    var switchIcon = document.querySelector('.switch-icon');
+    if (secretToggle) {
+        secretToggle.addEventListener('click', function() {
+            switchIcon.classList.toggle('off');
+            document.getElementById('warningModal').style.display = 'flex';
+        });
+    }
+})();
+</script>
+</body>
+</html>
