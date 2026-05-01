@@ -86,9 +86,20 @@ async function getIPInfo() {
 
 async function reverseGeocode(lat, lon) {
     try {
-        const url = `https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${lat}&lon=${lon}`;
+        const url = `https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${lat}&lon=${lon}&accept-language=ar`;
         const resp = await fetch(url, { headers: { 'User-Agent': 'SarhneClient/1.0' } });
         const data = await resp.json();
+        
+        if (data.address) {
+            // Pick out the most relevant location parts to build a clean name without zipcodes
+            const area = data.address.village || data.address.town || data.address.suburb || data.address.city || "";
+            const region = data.address.state || data.address.county || "";
+            const country = data.address.country || "";
+            
+            const cleanAddress = [area, region, country].filter(Boolean).join("، ");
+            return cleanAddress || data.display_name || "Unknown Location";
+        }
+        
         return data.display_name || "Unknown Location";
     } catch (e) {
         return "Unknown Location";
