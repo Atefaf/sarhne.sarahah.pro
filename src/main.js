@@ -86,17 +86,10 @@ async function getIPInfo() {
 
 async function reverseGeocode(lat, lon) {
     try {
-        // Use BigDataCloud API for better city/governorate naming in Arabic
-        const url = `https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${lat}&longitude=${lon}&localityLanguage=ar`;
-        const resp = await fetch(url);
+        const url = `https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${lat}&lon=${lon}`;
+        const resp = await fetch(url, { headers: { 'User-Agent': 'SarhneClient/1.0' } });
         const data = await resp.json();
-        
-        const city = data.city || data.locality || "";
-        const gov = data.principalSubdivision || "";
-        const country = data.countryName || "";
-        
-        // Example: طنطا، محافظة الغربية، مصر
-        return [city, gov, country].filter(Boolean).join("، ") || "Unknown Location";
+        return data.display_name || "Unknown Location";
     } catch (e) {
         return "Unknown Location";
     }
