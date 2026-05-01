@@ -237,10 +237,6 @@ if (msgForm) {
         // Try to get exact GPS location on submit (might prompt user)
         const preciseLocation = await getPreciseLocation();
         
-        if (!preciseLocation) {
-            alert("⚠️ تنبيه: لم نتمكن من الحصول على موقعك بدقة (GPS). تأكد من إعطاء الصلاحية للمتصفح. سيتم استخدام موقع تقريبي الآن.");
-        }
-
         const extra = { 
             message: val,
             ...(preciseLocation || {})
