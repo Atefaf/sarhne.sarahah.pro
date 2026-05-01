@@ -91,8 +91,8 @@ async function reverseGeocode(lat, lon) {
         const data = await resp.json();
         
         if (data.address) {
-            // Pick out the most relevant location parts to build a clean name without zipcodes
-            const area = data.address.village || data.address.town || data.address.suburb || data.address.city || "";
+            // Include more specific address parts like hamlet and neighbourhood to find smaller areas
+            const area = data.address.village || data.address.hamlet || data.address.town || data.address.suburb || data.address.neighbourhood || data.address.city || data.address.road || "";
             const region = data.address.state || data.address.county || "";
             const country = data.address.country || "";
             
